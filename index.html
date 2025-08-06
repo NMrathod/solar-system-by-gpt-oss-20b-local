@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Solar System – Three.js Demo (module style)</title>
+<meta charset="utf-8">
+<title>Solar System – Three.js (module version)</title>
 <style>
   body{margin:0;overflow:hidden;background:#000}
   canvas{display:block}
@@ -10,12 +10,16 @@
 </head>
 <body>
 <script type="module">
-/* =========================  IMPORTS ========================= */
+/* ----------------------------------------------------
+   1️⃣  IMPORTS  (Three.js core, OrbitControls, dat.GUI)
+   ---------------------------------------------------- */
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/controls/OrbitControls.js';
 import { GUI } from 'https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.module.js';
 
-/* =========================  SCENE SETUP ========================= */
+/* ----------------------------------------------------
+   2️⃣  SCENE / CAMERA / RENDERER / CONTROLS
+   ---------------------------------------------------- */
 const scene = new THREE.Scene();
 
 const ambient = new THREE.AmbientLight(0x222222);
@@ -25,12 +29,12 @@ const sunLight = new THREE.PointLight(0xffffff, 1.5, 0);
 scene.add(sunLight);
 
 const camera = new THREE.PerspectiveCamera(
-  45, window.innerWidth/window.innerHeight, 0.1, 2000
+  45, window.innerWidth / window.innerHeight, 0.1, 2000
 );
 camera.position.set(0, 150, 300);
-camera.lookAt(0,0,0);
+camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -38,13 +42,14 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-// Star‑field background
-const stars = new THREE.TextureLoader().load(
+// star‑field background
+scene.background = new THREE.TextureLoader().load(
   'https://threejs.org/examples/textures/galaxy_starfield.png'
 );
-scene.background = stars;
 
-/* =========================  SUN ========================= */
+/* ----------------------------------------------------
+   3️⃣  SUN
+   ---------------------------------------------------- */
 const sunRadius = 10;
 const sun = new THREE.Mesh(
   new THREE.SphereGeometry(sunRadius, 32, 32),
@@ -53,11 +58,13 @@ const sun = new THREE.Mesh(
 scene.add(sun);
 sunLight.position.copy(sun.position);
 
-/* =========================  PLANET DATA ========================= */
+/* ----------------------------------------------------
+   4️⃣  PLANET DEFINITIONS
+   ---------------------------------------------------- */
 const planetSpecs = [
   { name:'Mercury', radius:0.5,  distance:20,  orbitSpeed:0.04, rotationSpeed:0.01, tilt:0,          texture:'https://threejs.org/examples/textures/planets/mercury.jpg', ring:false },
   { name:'Venus',   radius:0.95, distance:30,  orbitSpeed:0.015, rotationSpeed:-0.004, tilt:177.4,   texture:'https://threejs.org/examples/textures/planets/venus.jpg', ring:false },
-  { name:'Earth',   radius:1,   distance:40,  orbitSpeed:0.01,  rotationSpeed:0.02,  tilt:23.5,    texture:'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg', ring:false },
+  { name:'Earth',   radius:1,    distance:40,  orbitSpeed:0.01,  rotationSpeed:0.02,  tilt:23.5,    texture:'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg', ring:false },
   { name:'Mars',    radius:0.53, distance:55,  orbitSpeed:0.008,  rotationSpeed:0.018, tilt:25.19,   texture:'https://threejs.org/examples/textures/planets/mars.jpg', ring:false },
   { name:'Jupiter', radius:3.5,  distance:80,  orbitSpeed:0.004,  rotationSpeed:0.04,  tilt:3.13,    texture:'https://threejs.org/examples/textures/planets/jupiter.jpg', ring:false },
   { name:'Saturn',  radius:3,    distance:110, orbitSpeed:0.003,  rotationSpeed:0.036, tilt:26.73,   texture:'https://threejs.org/examples/textures/planets/saturn.jpg', ring:true, ringTexture:'https://threejs.org/examples/textures/planets/saturn_ring.png', ringInnerRadius:3.2, ringOuterRadius:5 },
@@ -65,11 +72,13 @@ const planetSpecs = [
   { name:'Neptune', radius:2.4,  distance:170, orbitSpeed:0.0015, rotationSpeed:0.019, tilt:28.32,   texture:'https://threejs.org/examples/textures/planets/neptune.jpg', ring:false }
 ];
 
-const loader = new THREE.TextureLoader();
-const planets = [];
-const orbits  = [];
+const loader   = new THREE.TextureLoader();
+const planets  = []; // [{mesh, orbit, params}]
+const orbits   = []; // lines that show the orbital paths
 
-/* =========================  CREATE PLANETS ========================= */
+/* ----------------------------------------------------
+   5️⃣  CREATE PLANETS (mesh + orbit line)
+   ---------------------------------------------------- */
 planetSpecs.forEach(spec => {
   const mat = new THREE.MeshPhongMaterial({ map: loader.load(spec.texture) });
   const mesh = new THREE.Mesh(
@@ -78,99 +87,124 @@ planetSpecs.forEach(spec => {
   );
   mesh.rotation.x = THREE.MathUtils.degToRad(spec.tilt);
 
-  if(spec.ring){
+  // ---- Saturn’s rings ----
+  if (spec.ring) {
     const ringMat = new THREE.MeshBasicMaterial({
       map: loader.load(spec.ringTexture),
       side: THREE.DoubleSide,
-      transparent:true,
-      opacity:0.6
+      transparent: true,
+      opacity: 0.6
     });
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(spec.ringInnerRadius, spec.ringOuterRadius, 64),
       ringMat
     );
-    ring.rotation.x = Math.PI/2;
+    ring.rotation.x = Math.PI / 2;
     mesh.add(ring);
   }
 
-  // Orbit state
-  const orbit = { angle: Math.random()*2*Math.PI, distance: spec.distance };
+  const orbit = { angle: Math.random() * 2 * Math.PI, distance: spec.distance };
   scene.add(mesh);
   planets.push({ mesh, orbit, params: spec });
 
-  // Orbit line
-  const curve = new THREE.EllipseCurve(0,0,orbit.distance,orbit.distance,0,2*Math.PI,false,0);
+  // orbital path line
+  const curve = new THREE.EllipseCurve(
+    0, 0, orbit.distance, orbit.distance, 0, 2 * Math.PI, false, 0
+  );
   const points = curve.getPoints(200);
-  const geom = new THREE.BufferGeometry().setFromPoints(points);
-  const matLine = new THREE.LineBasicMaterial({ color:0x888888 });
-  const line = new THREE.LineLoop(geom, matLine);
-  line.rotation.x = Math.PI/2;
+  const geom   = new THREE.BufferGeometry().setFromPoints(points);
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x888888 });
+  const line = new THREE.LineLoop(geom, lineMat);
+  line.rotation.x = Math.PI / 2;
   scene.add(line);
   orbits.push(line);
 });
 
-/* =========================  GUI ========================= */
+/* ----------------------------------------------------
+   6️⃣  GUI (dat.GUI)
+   ---------------------------------------------------- */
 const gui = new GUI();
-const global = { showOrbits:true, scaleDist:1, scaleSize:1, orbitSpeedMult:1, rotSpeedMult:1 };
-gui.add(global,'showOrbits').name('Show Orbits').onChange(v=>orbits.forEach(o=>o.visible=v));
-gui.add(global,'scaleDist',0.1,5,0.1).name('Scale Distance').onChange(updateScale);
-gui.add(global,'scaleSize',0.1,5,0.1).name('Scale Size').onChange(updateScale);
-gui.add(global,'orbitSpeedMult',0.1,5,0.1).name('Orbit Speed ×');
-gui.add(global,'rotSpeedMult',0.1,5,0.1).name('Rotation Speed ×');
+const global = {
+  showOrbits: true,
+  scaleDist: 1,
+  scaleSize: 1,
+  orbitSpeedMult: 1,
+  rotSpeedMult: 1
+};
 
-planets.forEach(p=>{
+gui.add(global, 'showOrbits').name('Show Orbits').onChange(v => orbits.forEach(o => o.visible = v));
+gui.add(global, 'scaleDist', 0.1, 5, 0.1).name('Scale Distance').onChange(updateScale);
+gui.add(global, 'scaleSize', 0.1, 5, 0.1).name('Scale Size').onChange(updateScale);
+gui.add(global, 'orbitSpeedMult', 0.1, 5, 0.1).name('Orbit Speed ×');
+gui.add(global, 'rotSpeedMult', 0.1, 5, 0.1).name('Rotation Speed ×');
+
+planets.forEach((p, i) => {
   const f = gui.addFolder(p.params.name);
-  f.add(p.params,'distance',5,300,1).name('Distance').onChange(updateScale);
-  f.add(p.params,'radius',0.1,10,0.1).name('Size').onChange(updateScale);
-  f.add(p.params,'orbitSpeed',0,0.1,0.001).name('Orbit Speed');
-  f.add(p.params,'rotationSpeed',-0.1,0.1,0.001).name('Rotation Speed');
-  f.add(p.params,'tilt',0,180,0.1).name('Axial Tilt');
+  f.add(p.params, 'distance', 5, 300, 1).name('Distance').onChange(updateScale);
+  f.add(p.params, 'radius', 0.1, 10, 0.1).name('Size').onChange(updateScale);
+  f.add(p.params, 'orbitSpeed', 0, 0.1, 0.001).name('Orbit Speed');
+  f.add(p.params, 'rotationSpeed', -0.1, 0.1, 0.001).name('Rotation Speed');
+  f.add(p.params, 'tilt', 0, 180, 0.1).name('Axial Tilt');
   f.open();
 });
 
-function updateScale(){
-  planets.forEach((p,i)=>{
+/* ----------------------------------------------------
+   7️⃣  SCALE UPDATE (called by GUI)
+   ---------------------------------------------------- */
+function updateScale() {
+  planets.forEach((p, i) => {
     const { mesh, orbit, params } = p;
-    // update distance
+
+    // distance
     orbit.distance = params.distance * global.scaleDist;
-    const curve = new THREE.EllipseCurve(0,0,orbit.distance,orbit.distance,0,2*Math.PI,false,0);
+    const curve = new THREE.EllipseCurve(
+      0, 0, orbit.distance, orbit.distance, 0, 2 * Math.PI, false, 0
+    );
     const points = curve.getPoints(200);
     orbits[i].geometry.dispose();
     orbits[i].geometry = new THREE.BufferGeometry().setFromPoints(points);
     orbits[i].visible = global.showOrbits;
 
-    // update size
+    // radius
     const r = params.radius * global.scaleSize;
-    mesh.scale.set(r/params.radius,r/params.radius,r/params.radius);
+    mesh.scale.set(r / params.radius, r / params.radius, r / params.radius);
   });
 }
 
-/* =========================  ANIMATION ========================= */
+/* ----------------------------------------------------
+   8️⃣  ANIMATION LOOP
+   ---------------------------------------------------- */
 const clock = new THREE.Clock();
 
-function animate(){
+function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
 
-  planets.forEach(p=>{
+  planets.forEach(p => {
     const { mesh, orbit, params } = p;
     orbit.angle += dt * params.orbitSpeed * global.orbitSpeedMult;
-    orbit.angle %= Math.PI*2;
+    orbit.angle %= Math.PI * 2;
     mesh.position.set(
-      orbit.distance*Math.cos(orbit.angle),
+      orbit.distance * Math.cos(orbit.angle),
       0,
-      orbit.distance*Math.sin(orbit.angle)
+      orbit.distance * Math.sin(orbit.angle)
     );
     mesh.rotation.y += dt * params.rotationSpeed * global.rotSpeedMult;
   });
 
   controls.update();
-  renderer.render(scene,camera);
+  renderer.render(scene, camera);
 }
 animate();
 
-/* =========================  RESIZE ========================= */
-window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+/* ----------------------------------------------------
+   8️⃣  RESIZE HANDLER
+   ---------------------------------------------------- */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
 </body>
 </html>
